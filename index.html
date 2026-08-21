@@ -219,33 +219,45 @@
   }
 
   .availability-inner {
-    max-width: 1300px;
+    max-width: 1450px;
     margin: 0 auto;
     padding: 0 1.5rem;
   }
 
   .availability-content {
+    display: grid;
+    grid-template-columns: 480px 1fr;
+    column-gap: 5.5rem;
+    align-items: stretch;
+  }
+
+  .availability-left {
     display: flex;
-    align-items: flex-start;
-    flex-wrap: wrap;
+    flex-direction: column;
   }
 
   .cal-column {
     max-width: 480px;
-    flex: 0 0 auto;
     width: 480px;
   }
 
   .week-table-column {
-    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
+    height: 100%;
   }
 
   .week-table-inner {
     width: 100%;
     max-width: 620px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .week-table-wrap {
+    flex: 1;
   }
 
   .week-header {
@@ -264,6 +276,7 @@
 
   .week-table {
     width: 100%;
+    height: 100%;
     border-collapse: collapse;
     table-layout: fixed;
   }
@@ -332,7 +345,7 @@
     display: flex;
     flex-wrap: nowrap;
     gap: 0.35rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.6rem;
     overflow-x: auto;
   }
 
@@ -467,9 +480,12 @@
     .info { grid-template-columns: 1fr; }
     .availability-inner { padding: 0 1rem; }
     .cal-day { font-size: 0.7rem; }
-    .availability-content { flex-direction: column; }
-    .cal-column, .week-table-column { max-width: 100%; width: 100%; }
-    .week-table-inner { max-width: 100%; }
+    .availability-content { grid-template-columns: 1fr; }
+    .cal-column, .week-table-column { max-width: 100%; width: 100%; height: auto; }
+    .week-table-inner { max-width: 100%; height: auto; }
+    .week-table-column { margin-top: 1.5rem; }
+    .week-table { height: auto; }
+    .week-cell { height: 2.6rem; }
   }
 </style>
 </head>
@@ -521,26 +537,28 @@
 <section class="availability">
   <div class="availability-card">
     <div class="availability-inner">
-      <h2>Beschikbaarheid</h2>
-      <p class="sub">Kies je naam en klik de dagen aan waarop je kan spelen.</p>
-
       <div class="player-picker" id="playerPicker"></div>
 
       <div class="availability-content">
-        <div class="cal-column">
-          <div class="cal-header">
-            <button class="cal-nav" id="prevMonth" aria-label="Vorige maand">‹</button>
-            <span class="cal-month-label" id="calMonthLabel"></span>
-            <button class="cal-nav" id="nextMonth" aria-label="Volgende maand">›</button>
+        <div class="availability-left">
+          <h2>Beschikbaarheid</h2>
+          <p class="sub">Kies je naam en klik de dagen aan waarop je kan spelen.</p>
+
+          <div class="cal-column">
+            <div class="cal-header">
+              <button class="cal-nav" id="prevMonth" aria-label="Vorige maand">‹</button>
+              <span class="cal-month-label" id="calMonthLabel"></span>
+              <button class="cal-nav" id="nextMonth" aria-label="Volgende maand">›</button>
+            </div>
+
+            <div class="cal-weekdays">
+              <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+            </div>
+
+            <div class="cal-grid" id="calGrid"></div>
+
+            <p class="cal-note" id="calNote">Kies eerst je naam hierboven om dagen aan te klikken.</p>
           </div>
-
-          <div class="cal-weekdays">
-            <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
-          </div>
-
-          <div class="cal-grid" id="calGrid"></div>
-
-          <p class="cal-note" id="calNote">Kies eerst je naam hierboven om dagen aan te klikken.</p>
         </div>
 
         <div class="week-table-column">
@@ -550,7 +568,9 @@
               <span class="week-label" id="weekLabel"></span>
               <button class="cal-nav" id="nextWeek" aria-label="Volgende week">›</button>
             </div>
-            <table class="week-table" id="weekTable"></table>
+            <div class="week-table-wrap">
+              <table class="week-table" id="weekTable"></table>
+            </div>
           </div>
         </div>
       </div>
