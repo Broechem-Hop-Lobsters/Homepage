@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broechem Hop Lobsters — Weekschema</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --court: #14433D;
+    --court-dark: #0C2C28;
+    --hero-black: #0A0A0A;
+    --ball: #D6F52C;
+    --clay: #EFE6D6;
+    --ink: #12201C;
+    --white: #FDFCF9;
+    --line: rgba(253,252,249,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Work Sans', sans-serif;
+    background: var(--clay);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Archivo Black', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+
+  /* HERO */
+  .hero {
+    background: var(--hero-black);
+    color: var(--white);
+    padding: 0.75rem 1.5rem;
+    height: 50vh;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-inner {
+    position: relative;
+    max-width: 780px;
+    margin: 0 auto;
+    text-align: center;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-logo {
+    height: 100%;
+    max-height: 100%;
+    width: auto;
+    max-width: 90vw;
+    object-fit: contain;
+    filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+  }
+
+  /* SCHEDULE */
+  .schedule {
+    max-width: 1000px;
+    margin: 2.5rem auto 0;
+    padding: 0 1.5rem 4rem;
+    position: relative;
+  }
+
+  .schedule-card {
+    background: var(--white);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(20,67,61,0.18);
+    padding: 2.5rem;
+  }
+
+  .schedule-card h2 {
+    font-size: 1.4rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .schedule-card .sub {
+    color: #6b6459;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+
+  .matches {
+    display: grid;
+    gap: 1.4rem;
+  }
+
+  .match {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 1.2rem;
+    align-items: center;
+    border: 1px solid #E4DBC8;
+    border-radius: 14px;
+    padding: 1.2rem;
+  }
+
+  .match .day {
+    font-family: 'Archivo Black', sans-serif;
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    color: var(--court);
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .match .day span {
+    display: block;
+    font-size: 0.7rem;
+    color: #8a8375;
+    margin-top: 0.2rem;
+  }
+
+  .court {
+    position: relative;
+    background: var(--court);
+    border-radius: 10px;
+    padding: 0.9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--white);
+    overflow: hidden;
+  }
+
+  .court::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 8%;
+    bottom: 8%;
+    width: 2px;
+    background: var(--line);
+  }
+
+  .team {
+    display: flex;
+    gap: 0.6rem;
+    z-index: 1;
+  }
+
+  .player {
+    background: rgba(253,252,249,0.1);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .vs {
+    color: var(--ball);
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.75rem;
+    z-index: 1;
+    padding: 0 0.5rem;
+  }
+
+  /* INFO */
+  .info {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .info-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 1.6rem;
+    border: 1px solid #E4DBC8;
+  }
+
+  .info-card .num {
+    font-family: 'Archivo Black', sans-serif;
+    color: var(--ball);
+    -webkit-text-stroke: 1.5px var(--court);
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .info-card h3 {
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .info-card p {
+    font-size: 0.88rem;
+    color: #6b6459;
+  }
+
+  /* AVAILABILITY */
+  .availability {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .availability-card {
+    background: var(--white);
+    width: 100%;
+    padding: 1.3rem 0;
+    box-shadow: inset 0 1px 0 #E4DBC8, inset 0 -1px 0 #E4DBC8;
+  }
+
+  .availability-inner {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .availability-content {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .cal-column {
+    max-width: 480px;
+    flex: 0 0 auto;
+    width: 480px;
+  }
+
+  .week-table-column {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .week-table-inner {
+    width: 100%;
+    max-width: 620px;
+  }
+
+  .week-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+  }
+
+  .week-label {
+    font-family: 'Archivo Black', sans-serif;
+    text-transform: uppercase;
+    font-size: 1.15rem;
+    color: var(--court);
+  }
+
+  .week-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .week-table th, .week-table td {
+    text-align: center;
+    padding: 0;
+    border: 1px solid #E4DBC8;
+  }
+
+  .week-table thead th {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--court);
+    background: var(--clay);
+    line-height: 1.2;
+    padding: 0.5rem 0.2rem;
+  }
+
+  .week-table thead th span {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #8a8375;
+  }
+
+  .week-table .name-col {
+    width: 24%;
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--clay);
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  thead .name-col {
+    background: var(--clay);
+  }
+
+  .week-cell {
+    height: 2.6rem;
+    background: var(--white);
+  }
+
+  .week-cell.available {
+    background: #2E7D32;
+  }
+
+  .availability-card h2 {
+    font-size: 1.35rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .availability-card .sub {
+    color: #6b6459;
+    margin-bottom: 0.8rem;
+    font-size: 0.92rem;
+  }
+
+  .player-picker {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+  }
+
+  .player-pill {
+    border: 1.5px solid #E4DBC8;
+    background: var(--clay);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 0.34rem 0.7rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .player-pill:hover {
+    border-color: var(--court);
+  }
+
+  .player-pill.active {
+    background: var(--court);
+    border-color: var(--court);
+    color: var(--white);
+  }
+
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  .cal-nav {
+    background: var(--court);
+    color: var(--white);
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+
+  .cal-nav:hover {
+    background: var(--court-dark);
+  }
+
+  .cal-month-label {
+    font-family: 'Archivo Black', sans-serif;
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    color: var(--court);
+  }
+
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.35rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .cal-weekdays span {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #8a8375;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.35rem;
+  }
+
+  .cal-day {
+    aspect-ratio: 5 / 3;
+    border: 1.5px solid #E4DBC8;
+    background: var(--clay);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .cal-day:hover {
+    border-color: var(--court);
+  }
+
+  .cal-day.empty {
+    background: transparent;
+    border: none;
+    cursor: default;
+  }
+
+  .cal-day.available {
+    background: #2E7D32;
+    border-color: #2E7D32;
+    color: var(--white);
+  }
+
+  .cal-note {
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    color: #8a8375;
+  }
+
+  footer {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    font-size: 0.85rem;
+    color: #8a8375;
+  }
+
+  @media (max-width: 640px) {
+    .match { grid-template-columns: 1fr; }
+    .match .day { text-align: left; }
+    .court { flex-direction: column; gap: 0.7rem; align-items: flex-start; }
+    .court::after { display: none; }
+    .info { grid-template-columns: 1fr; }
+    .availability-inner { padding: 0 1rem; }
+    .cal-day { font-size: 0.7rem; }
+    .availability-content { flex-direction: column; }
+    .cal-column, .week-table-column { max-width: 100%; width: 100%; }
+    .week-table-inner { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-inner">
+    <img class="hero-logo" src="hoplobsters-logo.png" alt="Broechem Hop Lobsters logo">
+  </div>
+</section>
+
+<section class="schedule">
+  <div class="schedule-card">
+    <h2>Schema deze week</h2>
+    <p class="sub">Voorbeeldindeling — pas de namen en dagen aan naar jullie eigen poll-resultaat.</p>
+    <div class="matches">
+
+      <div class="match">
+        <div class="day">DI<span>avond</span></div>
+        <div class="court">
+          <div class="team"><span class="player">Kevin</span><span class="player">Jurgen</span></div>
+          <span class="vs">VS</span>
+          <div class="team"><span class="player">Kristof</span><span class="player">Bert</span></div>
+        </div>
+      </div>
+
+      <div class="match">
+        <div class="day">DO<span>avond</span></div>
+        <div class="court">
+          <div class="team"><span class="player">Guido</span><span class="player">Kenny</span></div>
+          <span class="vs">VS</span>
+          <div class="team"><span class="player">Sven</span><span class="player">Kevin</span></div>
+        </div>
+      </div>
+
+      <div class="match">
+        <div class="day">ZA<span>ochtend</span></div>
+        <div class="court">
+          <div class="team"><span class="player">Guido</span><span class="player">Bert</span></div>
+          <span class="vs">VS</span>
+          <div class="team"><span class="player">Kenny</span><span class="player">Ken</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="availability">
+  <div class="availability-card">
+    <div class="availability-inner">
+      <h2>Beschikbaarheid</h2>
+      <p class="sub">Kies je naam en klik de dagen aan waarop je kan spelen.</p>
+
+      <div class="player-picker" id="playerPicker"></div>
+
+      <div class="availability-content">
+        <div class="cal-column">
+          <div class="cal-header">
+            <button class="cal-nav" id="prevMonth" aria-label="Vorige maand">‹</button>
+            <span class="cal-month-label" id="calMonthLabel"></span>
+            <button class="cal-nav" id="nextMonth" aria-label="Volgende maand">›</button>
+          </div>
+
+          <div class="cal-weekdays">
+            <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+          </div>
+
+          <div class="cal-grid" id="calGrid"></div>
+
+          <p class="cal-note" id="calNote">Kies eerst je naam hierboven om dagen aan te klikken.</p>
+        </div>
+
+        <div class="week-table-column">
+          <div class="week-table-inner">
+            <div class="week-header">
+              <button class="cal-nav" id="prevWeek" aria-label="Vorige week">‹</button>
+              <span class="week-label" id="weekLabel"></span>
+              <button class="cal-nav" id="nextWeek" aria-label="Volgende week">›</button>
+            </div>
+            <table class="week-table" id="weekTable"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+</footer>
+
+<script>
+  const PLAYERS = ["Kristof", "Kevin", "Ken", "Jurgen", "Bert", "Guido", "Kenny", "Sven"];
+  const MONTH_NAMES = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
+  const STORAGE_KEY = "hoplobsters-beschikbaarheid";
+
+  let data = {};
+  try {
+    data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch (e) {
+    data = {};
+  }
+
+  let currentPlayer = null;
+  let viewDate = new Date();
+  viewDate.setDate(1);
+
+  const playerPicker = document.getElementById("playerPicker");
+  const calGrid = document.getElementById("calGrid");
+  const calMonthLabel = document.getElementById("calMonthLabel");
+  const calNote = document.getElementById("calNote");
+  const weekTable = document.getElementById("weekTable");
+  const weekLabel = document.getElementById("weekLabel");
+
+  const DAY_LABELS = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
+  const DAY_SHORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
+
+  let weekViewDate = getMonday(new Date());
+
+  function getMonday(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  function renderPlayerPicker() {
+    playerPicker.innerHTML = "";
+    PLAYERS.forEach(name => {
+      const pill = document.createElement("button");
+      pill.className = "player-pill" + (name === currentPlayer ? " active" : "");
+      pill.textContent = name;
+      pill.addEventListener("click", () => {
+        currentPlayer = name;
+        renderPlayerPicker();
+        renderCalendar();
+        calNote.textContent = "Klik op een dag om je beschikbaarheid aan/uit te zetten.";
+      });
+      playerPicker.appendChild(pill);
+    });
+  }
+
+  function dateKey(d) {
+    return d.getFullYear() + "-" + (d.getMonth()+1).toString().padStart(2,"0") + "-" + d.getDate().toString().padStart(2,"0");
+  }
+
+  function renderCalendar() {
+    calMonthLabel.textContent = MONTH_NAMES[viewDate.getMonth()] + " " + viewDate.getFullYear();
+    calGrid.innerHTML = "";
+
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    let startOffset = firstDay.getDay() - 1;
+    if (startOffset < 0) startOffset = 6;
+
+    for (let i = 0; i < startOffset; i++) {
+      const empty = document.createElement("div");
+      empty.className = "cal-day empty";
+      calGrid.appendChild(empty);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const thisDate = new Date(year, month, day);
+      const key = dateKey(thisDate);
+      const btn = document.createElement("button");
+      btn.className = "cal-day";
+      btn.textContent = day;
+
+      if (currentPlayer && data[currentPlayer] && data[currentPlayer][key]) {
+        btn.classList.add("available");
+      }
+
+      btn.addEventListener("click", () => {
+        if (!currentPlayer) {
+          calNote.textContent = "Kies eerst je naam hierboven.";
+          return;
+        }
+        if (!data[currentPlayer]) data[currentPlayer] = {};
+        data[currentPlayer][key] = !data[currentPlayer][key];
+        saveData();
+        renderCalendar();
+        renderWeekTable();
+      });
+
+      calGrid.appendChild(btn);
+    }
+  }
+
+  function renderWeekTable() {
+    const monday = weekViewDate;
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+
+    const fmt = (d) => d.getDate() + " " + MONTH_NAMES[d.getMonth()].slice(0,3);
+    weekLabel.textContent = fmt(monday) + " – " + fmt(sunday);
+
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      weekDates.push(d);
+    }
+
+    let html = "<thead><tr><th class=\"name-col\"></th>";
+    weekDates.forEach((d, i) => {
+      html += `<th>${DAY_SHORT[i]}<span>${d.getDate()}/${d.getMonth()+1}</span></th>`;
+    });
+    html += "</tr></thead><tbody>";
+
+    PLAYERS.forEach(name => {
+      html += `<tr><td class="name-col">${name}</td>`;
+      weekDates.forEach((d, i) => {
+        const key = dateKey(d);
+        const isAvailable = data[name] && data[name][key];
+        html += `<td class="week-cell${isAvailable ? " available" : ""}" title="${name} — ${DAY_LABELS[i]}"></td>`;
+      });
+      html += "</tr>";
+    });
+    html += "</tbody>";
+    weekTable.innerHTML = html;
+  }
+
+  document.getElementById("prevMonth").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() - 1);
+    renderCalendar();
+  });
+
+  document.getElementById("nextMonth").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() + 1);
+    renderCalendar();
+  });
+
+  document.getElementById("prevWeek").addEventListener("click", () => {
+    weekViewDate.setDate(weekViewDate.getDate() - 7);
+    renderWeekTable();
+  });
+
+  document.getElementById("nextWeek").addEventListener("click", () => {
+    weekViewDate.setDate(weekViewDate.getDate() + 7);
+    renderWeekTable();
+  });
+
+  renderPlayerPicker();
+  renderCalendar();
+  renderWeekTable();
+</script>
+
+</body>
+</html>
