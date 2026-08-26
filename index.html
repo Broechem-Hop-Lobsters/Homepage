@@ -379,8 +379,8 @@
   }
 
   .player-pill.active {
-    background: var(--court);
-    border-color: var(--court);
+    background: #2E7D32;
+    border-color: #2E7D32;
     color: var(--white);
   }
 
@@ -506,9 +506,61 @@
     .week-table { height: auto; }
     .week-cell { height: 2.6rem; }
   }
+  .login-picker {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.5rem 0;
+  }
+
+  .login-pill {
+    border: 1.5px solid #E4DBC8;
+    background: var(--clay);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 0.85rem 1rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+  }
+
+  .login-pill:hover {
+    border-color: var(--court);
+    background: #E4DBC8;
+  }
+
+  @media (max-width: 640px) {
+    .login-picker { flex-wrap: wrap; }
+    .login-pill { flex: 1 1 40%; font-size: 0.9rem; padding: 0.7rem 0.8rem; }
+  }
 </style>
 </head>
 <body>
+
+<div id="loginView">
+
+<section class="hero">
+  <div class="hero-inner">
+    <img class="hero-logo" src="hoplobsters-logo.png" alt="Broechem Hop Lobsters logo">
+  </div>
+</section>
+
+<section class="schedule">
+  <div class="schedule-card">
+    <h2>Aanmelden</h2>
+    <p class="sub">Klik op je naam om verder te gaan.</p>
+    <div class="login-picker" id="loginPicker"></div>
+  </div>
+</section>
+
+</div>
+
+<div id="appView" style="display:none;">
 
 <section class="hero">
   <div class="hero-inner">
@@ -600,6 +652,8 @@
 <footer>
 </footer>
 
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
@@ -629,6 +683,9 @@
   viewDate.setDate(1);
 
   const playerPicker = document.getElementById("playerPicker");
+  const loginPicker = document.getElementById("loginPicker");
+  const loginView = document.getElementById("loginView");
+  const appView = document.getElementById("appView");
   const calGrid = document.getElementById("calGrid");
   const calMonthLabel = document.getElementById("calMonthLabel");
   const calNote = document.getElementById("calNote");
@@ -647,6 +704,24 @@
     date.setDate(date.getDate() + diff);
     date.setHours(0,0,0,0);
     return date;
+  }
+
+  function renderLoginPicker() {
+    loginPicker.innerHTML = "";
+    PLAYERS.forEach(name => {
+      const pill = document.createElement("button");
+      pill.className = "login-pill";
+      pill.textContent = name;
+      pill.addEventListener("click", () => {
+        currentPlayer = name;
+        loginView.style.display = "none";
+        appView.style.display = "";
+        renderPlayerPicker();
+        renderCalendar();
+        renderWeekTable();
+      });
+      loginPicker.appendChild(pill);
+    });
   }
 
   async function saveDay(playerName, key, newValue) {
@@ -671,6 +746,8 @@
   function startApp() {
     if (appStarted) return;
     appStarted = true;
+
+    renderLoginPicker();
 
     // Live meeluisteren: zodra iemand anders iets aanklikt, werkt dit automatisch bij
     onSnapshot(availabilityDocRef, (snap) => {
