@@ -224,14 +224,24 @@
     padding: 0 1.5rem;
   }
 
-  .availability-content {
+  .availability-group {
     display: grid;
-    grid-template-columns: 480px 1fr;
-    column-gap: 5.5rem;
+    grid-template-columns: 480px 620px;
+    column-gap: 12rem;
+    row-gap: 1.6rem;
     align-items: stretch;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  .player-picker {
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
   .availability-left {
+    grid-column: 1;
+    grid-row: 2;
     display: flex;
     flex-direction: column;
   }
@@ -242,6 +252,8 @@
   }
 
   .week-table-column {
+    grid-column: 2;
+    grid-row: 1 / 3;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -345,7 +357,6 @@
     display: flex;
     flex-wrap: nowrap;
     gap: 0.35rem;
-    margin-bottom: 1.6rem;
     overflow-x: auto;
   }
 
@@ -453,6 +464,11 @@
     cursor: default;
   }
 
+  .cal-day.in-week {
+    background: #DECBA0;
+    border-color: #CBB482;
+  }
+
   .cal-day.available {
     background: #2E7D32;
     border-color: #2E7D32;
@@ -480,7 +496,10 @@
     .info { grid-template-columns: 1fr; }
     .availability-inner { padding: 0 1rem; }
     .cal-day { font-size: 0.7rem; }
-    .availability-content { grid-template-columns: 1fr; }
+    .availability-group { grid-template-columns: 1fr; width: 100%; margin: 0; }
+    .player-picker { grid-column: 1; grid-row: 1; }
+    .availability-left { grid-column: 1; grid-row: 2; }
+    .week-table-column { grid-column: 1; grid-row: 3; }
     .cal-column, .week-table-column { max-width: 100%; width: 100%; height: auto; }
     .week-table-inner { max-width: 100%; height: auto; }
     .week-table-column { margin-top: 1.5rem; }
@@ -537,9 +556,9 @@
 <section class="availability">
   <div class="availability-card">
     <div class="availability-inner">
-      <div class="player-picker" id="playerPicker"></div>
+      <div class="availability-group">
+        <div class="player-picker" id="playerPicker"></div>
 
-      <div class="availability-content">
         <div class="availability-left">
           <h2>Beschikbaarheid</h2>
           <p class="sub">Kies je naam en klik de dagen aan waarop je kan spelen.</p>
@@ -581,17 +600,29 @@
 <footer>
 </footer>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-KnfhkZpEaJFCZuGqvGZ289QfH69Et1U",
+    authDomain: "broechem-hop-lobsters.firebaseapp.com",
+    projectId: "broechem-hop-lobsters",
+    storageBucket: "broechem-hop-lobsters.firebasestorage.app",
+    messagingSenderId: "829408587300",
+    appId: "1:829408587300:web:6d4a80b2e7a05a92fd32b1"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const auth = getAuth(firebaseApp);
+  const db = getFirestore(firebaseApp);
+  const availabilityDocRef = doc(db, "padel", "beschikbaarheid");
+
   const PLAYERS = ["Kristof", "Kevin", "Ken", "Jurgen", "Bert", "Guido", "Kenny", "Sven"];
   const MONTH_NAMES = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
-  const STORAGE_KEY = "hoplobsters-beschikbaarheid";
 
   let data = {};
-  try {
-    data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-  } catch (e) {
-    data = {};
-  }
 
   let currentPlayer = null;
   let viewDate = new Date();
@@ -618,10 +649,39 @@
     return date;
   }
 
-  function saveData() {
+  async function saveDay(playerName, key, newValue) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {}
+      await setDoc(availabilityDocRef, { [playerName]: { [key]: newValue } }, { merge: true });
+    } catch (e) {
+      calNote.textContent = "Kon niet opslaan — controleer je internetverbinding.";
+    }
+  }
+
+  // Aanmelden (onzichtbaar, geen inlogscherm) en dan pas de app opstarten
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      startApp();
+    }
+  });
+  signInAnonymously(auth).catch(() => {
+    calNote.textContent = "Kon niet verbinden met de gedeelde beschikbaarheid.";
+  });
+
+  let appStarted = false;
+  function startApp() {
+    if (appStarted) return;
+    appStarted = true;
+
+    // Live meeluisteren: zodra iemand anders iets aanklikt, werkt dit automatisch bij
+    onSnapshot(availabilityDocRef, (snap) => {
+      data = snap.exists() ? snap.data() : {};
+      renderCalendar();
+      renderWeekTable();
+    });
+
+    renderPlayerPicker();
+    renderCalendar();
+    renderWeekTable();
   }
 
   function renderPlayerPicker() {
@@ -668,6 +728,7 @@
       const btn = document.createElement("button");
       btn.className = "cal-day";
       btn.textContent = day;
+      btn.dataset.dateKey = key;
 
       if (currentPlayer && data[currentPlayer] && data[currentPlayer][key]) {
         btn.classList.add("available");
@@ -679,14 +740,33 @@
           return;
         }
         if (!data[currentPlayer]) data[currentPlayer] = {};
-        data[currentPlayer][key] = !data[currentPlayer][key];
-        saveData();
+        const newValue = !data[currentPlayer][key];
+        data[currentPlayer][key] = newValue;
         renderCalendar();
         renderWeekTable();
+        saveDay(currentPlayer, key, newValue);
       });
 
       calGrid.appendChild(btn);
     }
+
+    highlightWeekInCalendar();
+  }
+
+  function highlightWeekInCalendar() {
+    const weekKeys = new Set();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekViewDate);
+      d.setDate(d.getDate() + i);
+      weekKeys.add(dateKey(d));
+    }
+    calGrid.querySelectorAll(".cal-day").forEach(el => {
+      if (weekKeys.has(el.dataset.dateKey)) {
+        el.classList.add("in-week");
+      } else {
+        el.classList.remove("in-week");
+      }
+    });
   }
 
   function renderWeekTable() {
@@ -736,16 +816,14 @@
   document.getElementById("prevWeek").addEventListener("click", () => {
     weekViewDate.setDate(weekViewDate.getDate() - 7);
     renderWeekTable();
+    highlightWeekInCalendar();
   });
 
   document.getElementById("nextWeek").addEventListener("click", () => {
     weekViewDate.setDate(weekViewDate.getDate() + 7);
     renderWeekTable();
+    highlightWeekInCalendar();
   });
-
-  renderPlayerPicker();
-  renderCalendar();
-  renderWeekTable();
 </script>
 
 </body>
