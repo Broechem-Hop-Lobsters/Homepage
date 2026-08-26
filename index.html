@@ -563,7 +563,7 @@
 <section class="schedule">
   <div class="schedule-card">
     <h2>Aanmelden</h2>
-    <p class="sub">Klik op je naam om verder te gaan.</p>
+    <p class="sub"></p>
     <div class="login-picker" id="loginPicker"></div>
   </div>
 </section>
@@ -729,6 +729,7 @@
         renderPlayerPicker();
         renderCalendar();
         renderWeekTable();
+        calNote.textContent = "Klik op een dag om je beschikbaarheid aan/uit te zetten.";
       });
       loginPicker.appendChild(pill);
     });
@@ -913,16 +914,25 @@
     renderCalendar();
   });
 
+  function syncCalendarToWeek() {
+    if (weekViewDate.getMonth() !== viewDate.getMonth() || weekViewDate.getFullYear() !== viewDate.getFullYear()) {
+      viewDate = new Date(weekViewDate.getFullYear(), weekViewDate.getMonth(), 1);
+      renderCalendar();
+    } else {
+      highlightWeekInCalendar();
+    }
+  }
+
   document.getElementById("prevWeek").addEventListener("click", () => {
     weekViewDate.setDate(weekViewDate.getDate() - 7);
     renderWeekTable();
-    highlightWeekInCalendar();
+    syncCalendarToWeek();
   });
 
   document.getElementById("nextWeek").addEventListener("click", () => {
     weekViewDate.setDate(weekViewDate.getDate() + 7);
     renderWeekTable();
-    highlightWeekInCalendar();
+    syncCalendarToWeek();
   });
 </script>
 
