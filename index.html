@@ -339,7 +339,7 @@
   }
 
   .week-cell.available {
-    background: #2E7D32;
+    background: #C7F0C2;
   }
 
   .availability-card h2 {
@@ -379,9 +379,9 @@
   }
 
   .player-pill.active {
-    background: #2E7D32;
-    border-color: #2E7D32;
-    color: var(--white);
+    background: #C7F0C2;
+    border-color: #9FDC98;
+    color: var(--ink);
   }
 
   .cal-header {
@@ -464,15 +464,25 @@
     cursor: default;
   }
 
+  .cal-day.other-month {
+    background: var(--white);
+    border-color: #EFE9DC;
+    color: #b0a894;
+  }
+
+  .cal-day.other-month:hover {
+    border-color: var(--court);
+  }
+
   .cal-day.in-week {
     background: #DECBA0;
     border-color: #CBB482;
   }
 
   .cal-day.available {
-    background: #2E7D32;
-    border-color: #2E7D32;
-    color: var(--white);
+    background: #C7F0C2;
+    border-color: #9FDC98;
+    color: var(--ink);
   }
 
   .cal-note {
@@ -613,7 +623,7 @@
 
         <div class="availability-left">
           <h2>Beschikbaarheid</h2>
-          <p class="sub">Kies je naam en klik de dagen aan waarop je kan spelen.</p>
+          <p class="sub"></p>
 
           <div class="cal-column">
             <div class="cal-header">
@@ -628,7 +638,7 @@
 
             <div class="cal-grid" id="calGrid"></div>
 
-            <p class="cal-note" id="calNote">Kies eerst je naam hierboven om dagen aan te klikken.</p>
+            <p class="cal-note" id="calNote"></p>
           </div>
         </div>
 
@@ -781,6 +791,33 @@
     return d.getFullYear() + "-" + (d.getMonth()+1).toString().padStart(2,"0") + "-" + d.getDate().toString().padStart(2,"0");
   }
 
+  function makeDayButton(dateObj, inCurrentMonth) {
+    const key = dateKey(dateObj);
+    const btn = document.createElement("button");
+    btn.className = "cal-day" + (inCurrentMonth ? "" : " other-month");
+    btn.textContent = dateObj.getDate();
+    btn.dataset.dateKey = key;
+
+    if (currentPlayer && data[currentPlayer] && data[currentPlayer][key]) {
+      btn.classList.add("available");
+    }
+
+    btn.addEventListener("click", () => {
+      if (!currentPlayer) {
+        calNote.textContent = "Kies eerst je naam hierboven.";
+        return;
+      }
+      if (!data[currentPlayer]) data[currentPlayer] = {};
+      const newValue = !data[currentPlayer][key];
+      data[currentPlayer][key] = newValue;
+      renderCalendar();
+      renderWeekTable();
+      saveDay(currentPlayer, key, newValue);
+    });
+
+    return btn;
+  }
+
   function renderCalendar() {
     calMonthLabel.textContent = MONTH_NAMES[viewDate.getMonth()] + " " + viewDate.getFullYear();
     calGrid.innerHTML = "";
@@ -793,38 +830,24 @@
     let startOffset = firstDay.getDay() - 1;
     if (startOffset < 0) startOffset = 6;
 
-    for (let i = 0; i < startOffset; i++) {
-      const empty = document.createElement("div");
-      empty.className = "cal-day empty";
-      calGrid.appendChild(empty);
+    // Dagen van de vorige maand, om de eerste week aan te vullen
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = startOffset; i > 0; i--) {
+      const d = new Date(year, month - 1, prevMonthDays - i + 1);
+      calGrid.appendChild(makeDayButton(d, false));
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
       const thisDate = new Date(year, month, day);
-      const key = dateKey(thisDate);
-      const btn = document.createElement("button");
-      btn.className = "cal-day";
-      btn.textContent = day;
-      btn.dataset.dateKey = key;
+      calGrid.appendChild(makeDayButton(thisDate, true));
+    }
 
-      if (currentPlayer && data[currentPlayer] && data[currentPlayer][key]) {
-        btn.classList.add("available");
-      }
-
-      btn.addEventListener("click", () => {
-        if (!currentPlayer) {
-          calNote.textContent = "Kies eerst je naam hierboven.";
-          return;
-        }
-        if (!data[currentPlayer]) data[currentPlayer] = {};
-        const newValue = !data[currentPlayer][key];
-        data[currentPlayer][key] = newValue;
-        renderCalendar();
-        renderWeekTable();
-        saveDay(currentPlayer, key, newValue);
-      });
-
-      calGrid.appendChild(btn);
+    // Dagen van de volgende maand, om de laatste week aan te vullen
+    const totalCells = startOffset + daysInMonth;
+    const trailing = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= trailing; i++) {
+      const d = new Date(year, month + 1, i);
+      calGrid.appendChild(makeDayButton(d, false));
     }
 
     highlightWeekInCalendar();
