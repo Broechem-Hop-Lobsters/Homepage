@@ -336,10 +336,62 @@
   .week-cell {
     height: 2.6rem;
     background: var(--white);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .week-cell:hover {
+    background: #EFE9DC;
   }
 
   .week-cell.available {
     background: #C7F0C2;
+  }
+
+  .week-cell.proposed {
+    background: #E4534B;
+  }
+
+  .week-cell.available:hover,
+  .week-cell.proposed:hover {
+    filter: brightness(0.95);
+  }
+
+  .week-actions-bar {
+    max-width: 1450px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+  }
+
+  .week-actions-inner {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+
+  .week-note {
+    font-size: 0.85rem;
+    color: #6b6459;
+    margin: 0;
+  }
+
+  .btn-inplannen {
+    background: var(--court);
+    color: var(--white);
+    border: none;
+    font-family: 'Archivo Black', sans-serif;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    padding: 0.8rem 1.8rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .btn-inplannen:hover {
+    background: var(--court-dark);
   }
 
   .availability-card h2 {
@@ -582,36 +634,7 @@
   <div class="schedule-card">
     <h2>Schema deze week</h2>
     <p class="sub">Voorbeeldindeling — pas de namen en dagen aan naar jullie eigen poll-resultaat.</p>
-    <div class="matches">
-
-      <div class="match">
-        <div class="day">DI<span>avond</span></div>
-        <div class="court">
-          <div class="team"><span class="player">Kevin</span><span class="player">Jurgen</span></div>
-          <span class="vs">VS</span>
-          <div class="team"><span class="player">Kristof</span><span class="player">Bert</span></div>
-        </div>
-      </div>
-
-      <div class="match">
-        <div class="day">DO<span>avond</span></div>
-        <div class="court">
-          <div class="team"><span class="player">Guido</span><span class="player">Kenny</span></div>
-          <span class="vs">VS</span>
-          <div class="team"><span class="player">Sven</span><span class="player">Kevin</span></div>
-        </div>
-      </div>
-
-      <div class="match">
-        <div class="day">ZA<span>ochtend</span></div>
-        <div class="court">
-          <div class="team"><span class="player">Guido</span><span class="player">Bert</span></div>
-          <span class="vs">VS</span>
-          <div class="team"><span class="player">Kenny</span><span class="player">Ken</span></div>
-        </div>
-      </div>
-
-    </div>
+    <div class="matches" id="matchesContainer"></div>
   </div>
 </section>
 
@@ -659,6 +682,13 @@
   </div>
 </section>
 
+<section class="week-actions-bar">
+  <div class="week-actions-inner">
+    <p class="week-note" id="weekNote"></p>
+    <button class="btn-inplannen" id="inplannenBtn">Inplannen</button>
+  </div>
+</section>
+
 <footer>
 </footer>
 
@@ -667,7 +697,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-KnfhkZpEaJFCZuGqvGZ289QfH69Et1U",
@@ -682,11 +712,15 @@
   const auth = getAuth(firebaseApp);
   const db = getFirestore(firebaseApp);
   const availabilityDocRef = doc(db, "padel", "beschikbaarheid");
+  const voorstelDocRef = doc(db, "padel", "voorstel");
+  const schemaDocRef = doc(db, "padel", "schema");
 
   const PLAYERS = ["Kristof", "Kevin", "Ken", "Jurgen", "Bert", "Guido", "Kenny", "Sven"];
   const MONTH_NAMES = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
 
   let data = {};
+  let voorstelData = {};
+  let schemaData = {};
 
   let currentPlayer = null;
   let viewDate = new Date();
@@ -701,6 +735,9 @@
   const calNote = document.getElementById("calNote");
   const weekTable = document.getElementById("weekTable");
   const weekLabel = document.getElementById("weekLabel");
+  const weekNote = document.getElementById("weekNote");
+  const inplannenBtn = document.getElementById("inplannenBtn");
+  const matchesContainer = document.getElementById("matchesContainer");
 
   const DAY_LABELS = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
   const DAY_SHORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
@@ -767,9 +804,20 @@
       renderWeekTable();
     });
 
+    onSnapshot(voorstelDocRef, (snap) => {
+      voorstelData = snap.exists() ? snap.data() : {};
+      renderWeekTable();
+    });
+
+    onSnapshot(schemaDocRef, (snap) => {
+      schemaData = snap.exists() ? snap.data() : {};
+      renderMatches();
+    });
+
     renderPlayerPicker();
     renderCalendar();
     renderWeekTable();
+    renderMatches();
   }
 
   function renderPlayerPicker() {
@@ -896,12 +944,39 @@
       weekDates.forEach((d, i) => {
         const key = dateKey(d);
         const isAvailable = data[name] && data[name][key];
-        html += `<td class="week-cell${isAvailable ? " available" : ""}" title="${name} — ${DAY_LABELS[i]}"></td>`;
+        const isProposed = voorstelData[key] && voorstelData[key].includes(name);
+        const cls = "week-cell" + (isProposed ? " proposed" : (isAvailable ? " available" : ""));
+        html += `<td class="${cls}" data-date="${key}" data-player="${name}" title="${name} — ${DAY_LABELS[i]}"></td>`;
       });
       html += "</tr>";
     });
     html += "</tbody>";
     weekTable.innerHTML = html;
+  }
+
+  weekTable.addEventListener("click", (e) => {
+    const cell = e.target.closest(".week-cell");
+    if (!cell) return;
+    toggleProposal(cell.dataset.date, cell.dataset.player);
+  });
+
+  async function toggleProposal(key, playerName) {
+    const current = voorstelData[key] || [];
+    const alreadyIn = current.includes(playerName);
+
+    if (!alreadyIn && current.length >= 4) {
+      weekNote.textContent = "Er staan al 4 spelers ingepland op deze dag.";
+      return;
+    }
+    weekNote.textContent = "";
+
+    try {
+      await setDoc(voorstelDocRef, {
+        [key]: alreadyIn ? arrayRemove(playerName) : arrayUnion(playerName)
+      }, { merge: true });
+    } catch (e) {
+      weekNote.textContent = "Kon niet opslaan — controleer je internetverbinding.";
+    }
   }
 
   document.getElementById("prevMonth").addEventListener("click", () => {
@@ -933,6 +1008,67 @@
     weekViewDate.setDate(weekViewDate.getDate() + 7);
     renderWeekTable();
     syncCalendarToWeek();
+  });
+
+  function renderMatches() {
+    const dateKeys = Object.keys(schemaData)
+      .filter(k => schemaData[k] && schemaData[k].length > 0)
+      .sort();
+
+    if (dateKeys.length === 0) {
+      matchesContainer.innerHTML = "<p class=\"sub\">Nog geen wedstrijden ingepland — stel hieronder een schema samen en klik op \"Inplannen\".</p>";
+      return;
+    }
+
+    let html = "";
+    dateKeys.forEach(key => {
+      const [y, m, d] = key.split("-").map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const dayIdx = (dateObj.getDay() + 6) % 7;
+      const players = schemaData[key];
+      const teamA = players.slice(0, 2);
+      const teamB = players.slice(2, 4);
+
+      html += `<div class="match">
+        <div class="day">${DAY_SHORT[dayIdx].toUpperCase()}<span>${d}/${m}</span></div>
+        <div class="court">
+          <div class="team">${teamA.map(n => `<span class="player">${n}</span>`).join("")}</div>
+          <span class="vs">VS</span>
+          <div class="team">${teamB.map(n => `<span class="player">${n}</span>`).join("")}</div>
+        </div>
+      </div>`;
+    });
+    matchesContainer.innerHTML = html;
+  }
+
+  inplannenBtn.addEventListener("click", async () => {
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekViewDate);
+      d.setDate(d.getDate() + i);
+      weekDates.push(dateKey(d));
+    }
+
+    const updates = {};
+    let hasAny = false;
+    weekDates.forEach(key => {
+      if (voorstelData[key] && voorstelData[key].length > 0) {
+        updates[key] = voorstelData[key];
+        hasAny = true;
+      }
+    });
+
+    if (!hasAny) {
+      weekNote.textContent = "Duid eerst spelers aan in de tabel hierboven.";
+      return;
+    }
+
+    try {
+      await setDoc(schemaDocRef, updates, { merge: true });
+      weekNote.textContent = "Ingepland! Zie \"Schema deze week\" bovenaan.";
+    } catch (e) {
+      weekNote.textContent = "Kon niet inplannen — controleer je internetverbinding.";
+    }
   });
 </script>
 
