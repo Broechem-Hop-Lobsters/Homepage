@@ -903,6 +903,11 @@
     return d.getFullYear() + "-" + (d.getMonth()+1).toString().padStart(2,"0") + "-" + d.getDate().toString().padStart(2,"0");
   }
 
+  function getConfirmedPlayers(key) {
+    const matches = schemaData[key] || [];
+    return matches.flatMap(m => m.players || []);
+  }
+
   function makeDayButton(dateObj, inCurrentMonth) {
     const key = dateKey(dateObj);
     const btn = document.createElement("button");
@@ -919,8 +924,13 @@
         calNote.textContent = "Kies eerst je naam hierboven.";
         return;
       }
+      const isCurrentlyAvailable = !!(data[currentPlayer] && data[currentPlayer][key]);
+      if (isCurrentlyAvailable && getConfirmedPlayers(key).includes(currentPlayer)) {
+        calNote.textContent = "Je staat al ingepland voor een wedstrijd op deze dag — annuleer die eerst via \"Schema deze week\".";
+        return;
+      }
       if (!data[currentPlayer]) data[currentPlayer] = {};
-      const newValue = !data[currentPlayer][key];
+      const newValue = !isCurrentlyAvailable;
       data[currentPlayer][key] = newValue;
       renderCalendar();
       renderWeekTable();
@@ -1008,7 +1018,7 @@
         const key = dateKey(d);
         const isAvailable = data[name] && data[name][key];
         const isProposed = voorstelData[key] && voorstelData[key].includes(name);
-        const isConfirmed = schemaData[key] && schemaData[key].includes(name);
+        const isConfirmed = getConfirmedPlayers(key).includes(name);
         const cls = "week-cell" + (isConfirmed ? " confirmed" : (isProposed ? " proposed" : (isAvailable ? " available" : "")));
         html += `<td class="${cls}" data-date="${key}" data-player="${name}" title="${name} — ${DAY_LABELS[i]}"></td>`;
       });
@@ -1028,13 +1038,13 @@
   });
 
   async function toggleProposal(key, playerName) {
-    const current = voorstelData[key] || [];
-    const alreadyIn = current.includes(playerName);
-
-    if (!alreadyIn && current.length >= 4) {
-      weekNote.textContent = "Er staan al 4 spelers ingepland op deze dag.";
+    if (getConfirmedPlayers(key).includes(playerName)) {
+      weekNote.textContent = "Deze speler is al ingepland — annuleer eerst via \"Schema deze week\".";
       return;
     }
+
+    const current = voorstelData[key] || [];
+    const alreadyIn = current.includes(playerName);
     weekNote.textContent = "";
 
     try {
@@ -1092,19 +1102,23 @@
       const [y, m, d] = key.split("-").map(Number);
       const dateObj = new Date(y, m - 1, d);
       const dayIdx = (dateObj.getDay() + 6) % 7;
-      const players = schemaData[key];
-      const teamA = players.slice(0, 2);
-      const teamB = players.slice(2, 4);
 
-      html += `<div class="match">
-        <div class="day">${DAY_SHORT[dayIdx].toUpperCase()}<span>${d}/${m}</span></div>
-        <div class="court">
-          <div class="team">${teamA.map(n => `<span class="player">${n}</span>`).join("")}</div>
-          <span class="vs">VS</span>
-          <div class="team">${teamB.map(n => `<span class="player">${n}</span>`).join("")}</div>
-        </div>
-        <button class="cancel-match" data-date="${key}" aria-label="Wedstrijd annuleren" title="Wedstrijd annuleren">✕</button>
-      </div>`;
+      schemaData[key].forEach(match => {
+        const players = match.players || [];
+        const teamA = players.slice(0, 2);
+        const teamB = players.slice(2, 4);
+        const matchJson = JSON.stringify(match).replace(/"/g, "&quot;");
+
+        html += `<div class="match">
+          <div class="day">${DAY_SHORT[dayIdx].toUpperCase()}<span>${d}/${m}</span></div>
+          <div class="court">
+            <div class="team">${teamA.map(n => `<span class="player">${n}</span>`).join("")}</div>
+            <span class="vs">VS</span>
+            <div class="team">${teamB.map(n => `<span class="player">${n}</span>`).join("")}</div>
+          </div>
+          <button class="cancel-match" data-date="${key}" data-match="${matchJson}" aria-label="Wedstrijd annuleren" title="Wedstrijd annuleren">✕</button>
+        </div>`;
+      });
     });
     matchesContainer.innerHTML = html;
   }
@@ -1113,11 +1127,24 @@
     const btn = e.target.closest(".cancel-match");
     if (!btn) return;
     try {
-      await setDoc(schemaDocRef, { [btn.dataset.date]: deleteField() }, { merge: true });
+      const matchObj = JSON.parse(btn.dataset.match.replace(/&quot;/g, "\""));
+      await setDoc(schemaDocRef, { [btn.dataset.date]: arrayRemove(matchObj) }, { merge: true });
     } catch (err) {
       weekNote.textContent = "Kon niet annuleren — controleer je internetverbinding.";
     }
   });
+
+  function chunkArray(arr, size) {
+    const result = [];
+    for (let i = 0; i < arr.length; i += size) {
+      result.push(arr.slice(i, i + size));
+    }
+    return result;
+  }
+
+  function generateMatchId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
 
   inplannenBtn.addEventListener("click", async () => {
     const weekDates = [];
@@ -1128,22 +1155,41 @@
     }
 
     const updates = {};
-    let hasAny = false;
+    let scheduledAny = false;
+    let invalidDays = [];
+
     weekDates.forEach(key => {
-      if (voorstelData[key] && voorstelData[key].length > 0) {
-        updates[key] = voorstelData[key];
-        hasAny = true;
+      const confirmed = getConfirmedPlayers(key);
+      const newlyProposed = (voorstelData[key] || []).filter(p => !confirmed.includes(p));
+
+      if (newlyProposed.length === 0) return;
+
+      if (newlyProposed.length % 4 !== 0) {
+        invalidDays.push(key.split("-").reverse().slice(0,2).join("/"));
+        return;
       }
+
+      const newMatches = chunkArray(newlyProposed, 4).map(chunk => ({ id: generateMatchId(), players: chunk }));
+      updates[key] = arrayUnion(...newMatches);
+      scheduledAny = true;
     });
 
-    if (!hasAny) {
+    if (!scheduledAny && invalidDays.length === 0) {
       weekNote.textContent = "Duid eerst spelers aan in de tabel hierboven.";
       return;
     }
 
     try {
-      await setDoc(schemaDocRef, updates, { merge: true });
-      weekNote.textContent = "Ingepland! Zie \"Schema deze week\" bovenaan.";
+      if (scheduledAny) {
+        await setDoc(schemaDocRef, updates, { merge: true });
+      }
+      if (invalidDays.length > 0) {
+        weekNote.textContent = scheduledAny
+          ? `Ingepland! Let op: ${invalidDays.join(", ")} nog geen veelvoud van 4 spelers.`
+          : `Nog geen veelvoud van 4 spelers op: ${invalidDays.join(", ")}.`;
+      } else {
+        weekNote.textContent = "Ingepland! Zie \"Schema deze week\" bovenaan.";
+      }
     } catch (e) {
       weekNote.textContent = "Kon niet inplannen — controleer je internetverbinding.";
     }
