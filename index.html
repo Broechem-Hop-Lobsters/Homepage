@@ -100,12 +100,33 @@
 
   .match {
     display: grid;
-    grid-template-columns: 90px 1fr;
+    grid-template-columns: 90px 1fr auto;
     gap: 1.2rem;
     align-items: center;
     border: 1px solid #E4DBC8;
     border-radius: 14px;
     padding: 1.2rem;
+  }
+
+  .cancel-match {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #E4534B;
+    color: var(--white);
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .cancel-match:hover {
+    background: #C43E37;
   }
 
   .match .day {
@@ -296,7 +317,7 @@
   .week-table th, .week-table td {
     text-align: center;
     padding: 0;
-    border: 1px solid #E4DBC8;
+    border: 1px solid #000;
   }
 
   .week-table thead th {
@@ -349,11 +370,16 @@
   }
 
   .week-cell.proposed {
-    background: #E4534B;
+    background: #FBD2A1;
+  }
+
+  .week-cell.confirmed {
+    background: #DA8B93;
   }
 
   .week-cell.available:hover,
-  .week-cell.proposed:hover {
+  .week-cell.proposed:hover,
+  .week-cell.confirmed:hover {
     filter: brightness(0.95);
   }
 
@@ -394,6 +420,42 @@
     background: var(--court-dark);
   }
 
+  .week-table thead th.name-col {
+    padding: 0.4rem;
+    background: var(--white);
+    border-top: none;
+    border-left: none;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .btn-inplannen-cell {
+    background: var(--court);
+    color: var(--white);
+    border: none;
+    font-family: 'Archivo Black', sans-serif;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.01em;
+    padding: 0 1.1rem;
+    height: 100%;
+    box-sizing: border-box;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .btn-inplannen-cell:hover {
+    background: var(--court-dark);
+  }
+
+  @media (max-width: 640px) {
+    .btn-inplannen-cell { font-size: 0.55rem; }
+  }
+
   .availability-card h2 {
     font-size: 1.35rem;
     margin-bottom: 0.15rem;
@@ -413,7 +475,7 @@
   }
 
   .player-pill {
-    border: 1.5px solid #E4DBC8;
+    border: 1.5px solid #000;
     background: var(--clay);
     color: var(--ink);
     font-weight: 600;
@@ -432,7 +494,7 @@
 
   .player-pill.active {
     background: #C7F0C2;
-    border-color: #9FDC98;
+    border-color: #000;
     color: var(--ink);
   }
 
@@ -493,7 +555,7 @@
 
   .cal-day {
     aspect-ratio: 5 / 3;
-    border: 1.5px solid #E4DBC8;
+    border: 1.5px solid #000;
     background: var(--clay);
     border-radius: 7px;
     display: flex;
@@ -518,7 +580,7 @@
 
   .cal-day.other-month {
     background: var(--white);
-    border-color: #EFE9DC;
+    border-color: #000;
     color: #b0a894;
   }
 
@@ -528,12 +590,12 @@
 
   .cal-day.in-week {
     background: #DECBA0;
-    border-color: #CBB482;
+    border-color: #000;
   }
 
   .cal-day.available {
     background: #C7F0C2;
-    border-color: #9FDC98;
+    border-color: #000;
     color: var(--ink);
   }
 
@@ -577,7 +639,7 @@
   }
 
   .login-pill {
-    border: 1.5px solid #E4DBC8;
+    border: 1.5px solid #000;
     background: var(--clay);
     color: var(--ink);
     font-weight: 700;
@@ -685,7 +747,7 @@
 <section class="week-actions-bar">
   <div class="week-actions-inner">
     <p class="week-note" id="weekNote"></p>
-    <button class="btn-inplannen" id="inplannenBtn">Inplannen</button>
+    <button class="btn-inplannen-cell" id="inplannenBtn">Inplannen</button>
   </div>
 </section>
 
@@ -697,7 +759,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, onSnapshot, arrayUnion, arrayRemove, deleteField } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-KnfhkZpEaJFCZuGqvGZ289QfH69Et1U",
@@ -715,7 +777,7 @@
   const voorstelDocRef = doc(db, "padel", "voorstel");
   const schemaDocRef = doc(db, "padel", "schema");
 
-  const PLAYERS = ["Kristof", "Kevin", "Ken", "Jurgen", "Bert", "Guido", "Kenny", "Sven"];
+  const PLAYERS = ["Kristof", "Kenny", "Kevin", "Ken", "Sven", "Jurgen", "Bert", "Guido"];
   const MONTH_NAMES = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
 
   let data = {};
@@ -812,6 +874,7 @@
     onSnapshot(schemaDocRef, (snap) => {
       schemaData = snap.exists() ? snap.data() : {};
       renderMatches();
+      renderWeekTable();
     });
 
     renderPlayerPicker();
@@ -945,13 +1008,17 @@
         const key = dateKey(d);
         const isAvailable = data[name] && data[name][key];
         const isProposed = voorstelData[key] && voorstelData[key].includes(name);
-        const cls = "week-cell" + (isProposed ? " proposed" : (isAvailable ? " available" : ""));
+        const isConfirmed = schemaData[key] && schemaData[key].includes(name);
+        const cls = "week-cell" + (isConfirmed ? " confirmed" : (isProposed ? " proposed" : (isAvailable ? " available" : "")));
         html += `<td class="${cls}" data-date="${key}" data-player="${name}" title="${name} — ${DAY_LABELS[i]}"></td>`;
       });
       html += "</tr>";
     });
     html += "</tbody>";
     weekTable.innerHTML = html;
+
+    const cornerCell = weekTable.querySelector("thead th.name-col");
+    if (cornerCell) cornerCell.appendChild(inplannenBtn);
   }
 
   weekTable.addEventListener("click", (e) => {
@@ -1036,10 +1103,21 @@
           <span class="vs">VS</span>
           <div class="team">${teamB.map(n => `<span class="player">${n}</span>`).join("")}</div>
         </div>
+        <button class="cancel-match" data-date="${key}" aria-label="Wedstrijd annuleren" title="Wedstrijd annuleren">✕</button>
       </div>`;
     });
     matchesContainer.innerHTML = html;
   }
+
+  matchesContainer.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".cancel-match");
+    if (!btn) return;
+    try {
+      await setDoc(schemaDocRef, { [btn.dataset.date]: deleteField() }, { merge: true });
+    } catch (err) {
+      weekNote.textContent = "Kon niet annuleren — controleer je internetverbinding.";
+    }
+  });
 
   inplannenBtn.addEventListener("click", async () => {
     const weekDates = [];
