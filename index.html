@@ -110,13 +110,19 @@
   }
 
   .match {
-    display: grid;
-    grid-template-columns: 90px 1fr auto;
-    gap: 1.2rem;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
     border: 1px solid #E4DBC8;
     border-radius: 14px;
     padding: 1.2rem;
+  }
+
+  .match-top {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
   }
 
   .cancel-match {
@@ -134,6 +140,7 @@
     justify-content: center;
     transition: background 0.15s ease;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .cancel-match:hover {
@@ -145,15 +152,34 @@
     text-transform: uppercase;
     font-size: 0.95rem;
     color: var(--court);
-    text-align: center;
+    text-align: left;
     line-height: 1.1;
+    flex-shrink: 0;
   }
 
   .match .day span {
     display: block;
     font-size: 0.7rem;
-    color: #8a8375;
+    color: var(--court);
     margin-top: 0.2rem;
+  }
+
+  .time-input, .court-input {
+    background: var(--white);
+    border: 1.5px solid #000;
+    border-radius: 8px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: 'Work Sans', sans-serif;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .time-input.placeholder, .court-input.placeholder {
+    color: #E4534B;
   }
 
   .court {
@@ -199,6 +225,98 @@
     font-size: 0.75rem;
     z-index: 1;
     padding: 0 0.5rem;
+  }
+
+  /* POPUPS (uur-keypad en terrein-dropdown) */
+  .popup-panel {
+    position: fixed;
+    z-index: 500;
+    background: var(--white);
+    border: 1.5px solid #000;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    padding: 0.8rem;
+    display: none;
+  }
+
+  .popup-panel.open {
+    display: block;
+  }
+
+  .time-popup-display {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 1.3rem;
+    text-align: center;
+    color: var(--court);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.05em;
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    width: 180px;
+  }
+
+  .keypad button {
+    background: var(--clay);
+    border: 1px solid #000;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.6rem 0;
+    cursor: pointer;
+    color: var(--ink);
+  }
+
+  .keypad button:hover {
+    background: #E4DBC8;
+  }
+
+  .keypad button.keypad-enter {
+    background: var(--court);
+    color: var(--white);
+    grid-column: span 1;
+  }
+
+  .keypad button.keypad-back {
+    background: #E4534B;
+    color: var(--white);
+  }
+
+  .court-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #E4DBC8;
+    padding: 0.55rem 0.4rem;
+    font-size: 0.88rem;
+    font-family: 'Work Sans', sans-serif;
+    color: var(--ink);
+    cursor: pointer;
+    min-width: 180px;
+  }
+
+  .court-option:last-child {
+    border-bottom: none;
+  }
+
+  .court-option:hover {
+    background: var(--clay);
+  }
+
+  .court-other-input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.4rem;
+    padding: 0.5rem 0.6rem;
+    border: 1.5px solid #000;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-family: 'Work Sans', sans-serif;
   }
 
   /* INFO */
@@ -628,8 +746,8 @@
   }
 
   @media (max-width: 640px) {
-    .match { grid-template-columns: 1fr; }
-    .match .day { text-align: left; }
+    .match-top { gap: 0.5rem; }
+    .time-input, .court-input { font-size: 0.72rem; padding: 0.35rem 0.5rem; }
     .court { flex-direction: column; gap: 0.7rem; align-items: flex-start; }
     .court::after { display: none; }
     .info { grid-template-columns: 1fr; }
@@ -780,6 +898,29 @@
 <footer>
 </footer>
 
+</div>
+
+<div class="popup-panel" id="timePopup">
+  <div class="time-popup-display" id="timePopupDisplay">--:--</div>
+  <div class="keypad">
+    <button data-key="1">1</button>
+    <button data-key="2">2</button>
+    <button data-key="3">3</button>
+    <button data-key="4">4</button>
+    <button data-key="5">5</button>
+    <button data-key="6">6</button>
+    <button data-key="7">7</button>
+    <button data-key="8">8</button>
+    <button data-key="9">9</button>
+    <button data-key="back" class="keypad-back">⌫</button>
+    <button data-key="0">0</button>
+    <button data-key="enter" class="keypad-enter">✓</button>
+  </div>
+</div>
+
+<div class="popup-panel" id="courtPopup">
+  <div id="courtOptionsList"></div>
+  <input type="text" class="court-other-input" id="courtOtherInput" style="display:none;" placeholder="Naam terrein" maxlength="40">
 </div>
 
 <script type="module">
@@ -1253,15 +1394,23 @@
         const teamA = players.slice(0, 2);
         const teamB = players.slice(2, 4);
         const matchJson = JSON.stringify(match).replace(/"/g, "&quot;");
+        const timeText = match.time ? match.time : "uur?";
+        const timeCls = match.time ? "time-input" : "time-input placeholder";
+        const courtText = match.court ? match.court : "terrein?";
+        const courtCls = match.court ? "court-input" : "court-input placeholder";
 
         html += `<div class="match">
-          <div class="day">${DAY_SHORT[dayIdx].toUpperCase()}<span>${d}/${m}</span></div>
+          <div class="match-top">
+            <div class="day">${DAY_SHORT[dayIdx].toUpperCase()}<span>${d}/${m}</span></div>
+            <button class="${timeCls}" data-date="${key}" data-id="${match.id}" data-field="time">${timeText}</button>
+            <button class="${courtCls}" data-date="${key}" data-id="${match.id}" data-field="court">${courtText}</button>
+            <button class="cancel-match" data-date="${key}" data-match="${matchJson}" aria-label="Wedstrijd annuleren" title="Wedstrijd annuleren">✕</button>
+          </div>
           <div class="court">
             <div class="team">${teamA.map(n => `<span class="player">${n}</span>`).join("")}</div>
             <span class="vs">VS</span>
             <div class="team">${teamB.map(n => `<span class="player">${n}</span>`).join("")}</div>
           </div>
-          <button class="cancel-match" data-date="${key}" data-match="${matchJson}" aria-label="Wedstrijd annuleren" title="Wedstrijd annuleren">✕</button>
         </div>`;
       });
     });
@@ -1269,15 +1418,41 @@
   }
 
   matchesContainer.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".cancel-match");
-    if (!btn) return;
-    try {
-      const matchObj = JSON.parse(btn.dataset.match.replace(/&quot;/g, "\""));
-      await setDoc(schemaDocRef, { [btn.dataset.date]: arrayRemove(matchObj) }, { merge: true });
-    } catch (err) {
-      weekNote.textContent = "Kon niet annuleren — controleer je internetverbinding.";
+    const cancelBtn = e.target.closest(".cancel-match");
+    if (cancelBtn) {
+      try {
+        const matchObj = JSON.parse(cancelBtn.dataset.match.replace(/&quot;/g, "\""));
+        await setDoc(schemaDocRef, { [cancelBtn.dataset.date]: arrayRemove(matchObj) }, { merge: true });
+      } catch (err) {
+        weekNote.textContent = "Kon niet annuleren — controleer je internetverbinding.";
+      }
+      return;
+    }
+
+    const timeBtn = e.target.closest(".time-input");
+    if (timeBtn) {
+      openTimePopup(timeBtn);
+      return;
+    }
+
+    const courtBtn = e.target.closest(".court-input");
+    if (courtBtn) {
+      openCourtPopup(courtBtn);
+      return;
     }
   });
+
+  async function updateMatchField(dateKeyStr, matchId, field, value) {
+    const matches = schemaData[dateKeyStr] || [];
+    const updated = matches.map(m => m.id === matchId ? Object.assign({}, m, { [field]: value }) : m);
+    schemaData[dateKeyStr] = updated;
+    renderMatches();
+    try {
+      await setDoc(schemaDocRef, { [dateKeyStr]: updated }, { merge: true });
+    } catch (e) {
+      weekNote.textContent = "Kon niet opslaan — controleer je internetverbinding.";
+    }
+  }
 
   function chunkArray(arr, size) {
     const result = [];
@@ -1343,6 +1518,169 @@
       navigator.serviceWorker.register("sw.js").catch(() => {});
     });
   }
+
+  /* ===== UUR-KEYPAD ===== */
+  const timePopup = document.getElementById("timePopup");
+  const timePopupDisplay = document.getElementById("timePopupDisplay");
+  let timeDigits = [];
+  let timeEditTarget = null; // { date, id }
+
+  function renderTimeDisplay() {
+    const chars = ["-","-",":","-","-"];
+    if (timeDigits[0] !== undefined) chars[0] = timeDigits[0];
+    if (timeDigits[1] !== undefined) chars[1] = timeDigits[1];
+    if (timeDigits[2] !== undefined) chars[3] = timeDigits[2];
+    if (timeDigits[3] !== undefined) chars[4] = timeDigits[3];
+    timePopupDisplay.textContent = chars.join("");
+  }
+
+  function positionPopup(popup, triggerEl) {
+    const rect = triggerEl.getBoundingClientRect();
+    const popupWidth = popup.offsetWidth || 220;
+    let left = rect.left;
+    if (left + popupWidth > window.innerWidth - 10) {
+      left = window.innerWidth - popupWidth - 10;
+    }
+    if (left < 10) left = 10;
+    popup.style.left = left + "px";
+    let top = rect.bottom + 6;
+    popup.style.top = top + "px";
+  }
+
+  function openTimePopup(triggerEl) {
+    closeCourtPopup();
+    timeEditTarget = { date: triggerEl.dataset.date, id: triggerEl.dataset.id };
+    timeDigits = [];
+    const current = matchesFieldValue(timeEditTarget, "time");
+    if (current && /^\d{2}:\d{2}$/.test(current)) {
+      timeDigits = [current[0], current[1], current[3], current[4]];
+    }
+    renderTimeDisplay();
+    timePopup.classList.add("open");
+    positionPopup(timePopup, triggerEl);
+  }
+
+  function closeTimePopup() {
+    timePopup.classList.remove("open");
+    timeEditTarget = null;
+    timeDigits = [];
+  }
+
+  function matchesFieldValue(target, field) {
+    if (!target) return null;
+    const list = schemaData[target.date] || [];
+    const m = list.find(x => x.id === target.id);
+    return m ? m[field] : null;
+  }
+
+  function pressTimeDigit(d) {
+    if (timeDigits.length >= 4) return;
+    const pos = timeDigits.length;
+    if (pos === 0 && !["0","1","2"].includes(d)) return;
+    if (pos === 1 && timeDigits[0] === "2" && !["0","1","2","3","4"].includes(d)) return;
+    if (pos === 2 && !["0","1","2","3","4","5"].includes(d)) return;
+    timeDigits.push(d);
+    renderTimeDisplay();
+  }
+
+  function pressTimeBackspace() {
+    timeDigits.pop();
+    renderTimeDisplay();
+  }
+
+  function pressTimeEnter() {
+    if (timeDigits.length !== 4 || !timeEditTarget) return;
+    const value = timeDigits[0] + timeDigits[1] + ":" + timeDigits[2] + timeDigits[3];
+    const target = timeEditTarget;
+    closeTimePopup();
+    updateMatchField(target.date, target.id, "time", value);
+  }
+
+  timePopup.querySelectorAll(".keypad button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.key;
+      if (key === "back") pressTimeBackspace();
+      else if (key === "enter") pressTimeEnter();
+      else pressTimeDigit(key);
+    });
+  });
+
+  /* ===== TERREIN-DROPDOWN ===== */
+  const COURT_OPTIONS = ["TC Emblem", "FC Kampioenen", "TC Oase", "TC De Chalet", "TC 't SAS", "TC Molenbos"];
+  const courtPopup = document.getElementById("courtPopup");
+  const courtOptionsList = document.getElementById("courtOptionsList");
+  const courtOtherInput = document.getElementById("courtOtherInput");
+  let courtEditTarget = null;
+
+  function renderCourtOptions() {
+    courtOtherInput.style.display = "none";
+    courtOtherInput.value = "";
+    let html = "";
+    COURT_OPTIONS.forEach(opt => {
+      html += `<button type="button" class="court-option" data-value="${opt}">${opt}</button>`;
+    });
+    html += `<button type="button" class="court-option" data-value="__other__">Andere…</button>`;
+    courtOptionsList.innerHTML = html;
+  }
+
+  function openCourtPopup(triggerEl) {
+    closeTimePopup();
+    courtEditTarget = { date: triggerEl.dataset.date, id: triggerEl.dataset.id };
+    renderCourtOptions();
+    courtPopup.classList.add("open");
+    positionPopup(courtPopup, triggerEl);
+  }
+
+  function closeCourtPopup() {
+    courtPopup.classList.remove("open");
+    courtEditTarget = null;
+  }
+
+  courtOptionsList.addEventListener("click", (e) => {
+    const opt = e.target.closest(".court-option");
+    if (!opt || !courtEditTarget) return;
+    if (opt.dataset.value === "__other__") {
+      courtOptionsList.style.display = "none";
+      courtOtherInput.style.display = "block";
+      courtOtherInput.focus();
+      return;
+    }
+    const target = courtEditTarget;
+    const value = opt.dataset.value;
+    closeCourtPopup();
+    updateMatchField(target.date, target.id, "court", value);
+  });
+
+  courtOtherInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const value = courtOtherInput.value.trim();
+      if (!value || !courtEditTarget) return;
+      const target = courtEditTarget;
+      closeCourtPopup();
+      updateMatchField(target.date, target.id, "court", value);
+    } else if (e.key === "Escape") {
+      closeCourtPopup();
+    }
+  });
+
+  /* ===== Gedeelde sluitlogica (buiten klikken / fysiek toetsenbord) ===== */
+  document.addEventListener("click", (e) => {
+    if (timePopup.classList.contains("open") && !timePopup.contains(e.target) && !e.target.closest(".time-input")) {
+      closeTimePopup();
+    }
+    if (courtPopup.classList.contains("open") && !courtPopup.contains(e.target) && !e.target.closest(".court-input")) {
+      closeCourtPopup();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (timePopup.classList.contains("open")) {
+      if (/^[0-9]$/.test(e.key)) { pressTimeDigit(e.key); e.preventDefault(); }
+      else if (e.key === "Backspace") { pressTimeBackspace(); e.preventDefault(); }
+      else if (e.key === "Enter") { pressTimeEnter(); e.preventDefault(); }
+      else if (e.key === "Escape") { closeTimePopup(); }
+    }
+  });
 </script>
 
 </body>
