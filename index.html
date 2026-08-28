@@ -217,6 +217,40 @@
     padding: 0.35rem 0.85rem;
     font-size: 0.85rem;
     font-weight: 600;
+    cursor: grab;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    user-select: none;
+  }
+
+  .player.drag-over {
+    outline: 2px dashed var(--ball);
+    outline-offset: 2px;
+  }
+
+  .player.dragging {
+    opacity: 0.4;
+  }
+
+  .booker-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 1.5px solid #000;
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: grab;
+  }
+
+  .booker-badge.drag-over {
+    outline: 2px dashed var(--ball);
+    outline-offset: 2px;
   }
 
   .vs {
@@ -722,8 +756,7 @@
   }
 
   .cal-day.in-week {
-    background: #DECBA0;
-    border-color: #000;
+    border-width: 3px;
   }
 
   .cal-day.available {
@@ -947,6 +980,7 @@
   const availabilityDocRef = doc(db, "padel", "beschikbaarheid");
   const voorstelDocRef = doc(db, "padel", "voorstel");
   const schemaDocRef = doc(db, "padel", "schema");
+  const geschiedenisDocRef = doc(db, "padel", "geschiedenis");
 
   const PLAYERS = ["Kristof", "Kenny", "Kevin", "Ken", "Sven", "Jurgen", "Bert", "Guido"];
   const MONTH_NAMES = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
@@ -954,6 +988,7 @@
   let data = {};
   let voorstelData = {};
   let schemaData = {};
+  let geschiedenisData = {};
 
   let currentPlayer = null;
 
@@ -1073,11 +1108,11 @@
 
     renderLoginPicker();
 
-    const loadedFlags = { availability: false, voorstel: false, schema: false };
+    const loadedFlags = { availability: false, voorstel: false, schema: false, geschiedenis: false };
     let cleanupDone = false;
 
     function maybeRunCleanup() {
-      if (cleanupDone || !(loadedFlags.availability && loadedFlags.voorstel && loadedFlags.schema)) return;
+      if (cleanupDone || !(loadedFlags.availability && loadedFlags.voorstel && loadedFlags.schema && loadedFlags.geschiedenis)) return;
       cleanupDone = true;
       cleanupPastData();
     }
@@ -1106,14 +1141,27 @@
       maybeRunCleanup();
     });
 
+    onSnapshot(geschiedenisDocRef, (snap) => {
+      geschiedenisData = snap.exists() ? snap.data() : {};
+      loadedFlags.geschiedenis = true;
+      maybeRunCleanup();
+    });
+
     renderPlayerPicker();
     renderCalendar();
     renderWeekTable();
     renderMatches();
   }
 
+  function dateKeyMonthsAgo(months) {
+    const d = startOfToday();
+    d.setMonth(d.getMonth() - months);
+    return dateKey(d);
+  }
+
   async function cleanupPastData() {
     const todayKey = dateKey(startOfToday());
+    const historyLimitKey = dateKeyMonthsAgo(3);
 
     const availUpdates = {};
     let hasAvailUpdates = false;
@@ -1139,13 +1187,34 @@
       }
     });
 
+    // Verlopen wedstrijden: verplaatsen naar geschiedenis (voor statistiek) i.p.v. meteen wissen
     const schemaUpdates = {};
     let hasSchemaUpdates = false;
+    const geschiedenisAdditions = {};
+    let hasGeschiedenisAdditions = false;
     Object.keys(schemaData).forEach(key => {
       if (key < todayKey) {
+        if (schemaData[key] && schemaData[key].length > 0) {
+          geschiedenisAdditions[key] = schemaData[key];
+          hasGeschiedenisAdditions = true;
+        }
         schemaUpdates[key] = deleteField();
         hasSchemaUpdates = true;
         delete schemaData[key];
+      }
+    });
+    Object.keys(geschiedenisAdditions).forEach(key => {
+      geschiedenisData[key] = geschiedenisAdditions[key];
+    });
+
+    // Geschiedenis ouder dan 3 maanden: definitief wissen
+    const geschiedenisRemovals = {};
+    let hasGeschiedenisRemovals = false;
+    Object.keys(geschiedenisData).forEach(key => {
+      if (key < historyLimitKey) {
+        geschiedenisRemovals[key] = deleteField();
+        hasGeschiedenisRemovals = true;
+        delete geschiedenisData[key];
       }
     });
 
@@ -1153,6 +1222,8 @@
       if (hasAvailUpdates) await setDoc(availabilityDocRef, availUpdates, { merge: true });
       if (hasVoorstelUpdates) await setDoc(voorstelDocRef, voorstelUpdates, { merge: true });
       if (hasSchemaUpdates) await setDoc(schemaDocRef, schemaUpdates, { merge: true });
+      if (hasGeschiedenisAdditions) await setDoc(geschiedenisDocRef, geschiedenisAdditions, { merge: true });
+      if (hasGeschiedenisRemovals) await setDoc(geschiedenisDocRef, geschiedenisRemovals, { merge: true });
     } catch (e) {}
 
     renderCalendar();
@@ -1403,6 +1474,14 @@
         const courtText = match.court ? match.court : "terrein?";
         const courtCls = match.court ? "court-input" : "court-input placeholder";
 
+        function renderPlayer(name, idx) {
+          const isBooker = match.booker === name;
+          const badge = isBooker
+            ? `<span class="booker-badge" draggable="true" data-date="${key}" data-id="${match.id}" title="Boekt het terrein">📅</span>`
+            : "";
+          return `<span class="player" draggable="true" data-date="${key}" data-id="${match.id}" data-idx="${idx}" data-name="${name}">${name}${badge}</span>`;
+        }
+
         html += `<div class="match">
           <div class="match-top">
             <div class="day">${DAY_SHORT[dayIdx].toUpperCase()}<span>${d}/${m}</span></div>
@@ -1411,9 +1490,9 @@
             <button class="cancel-match" data-date="${key}" data-match="${matchJson}" aria-label="Wedstrijd annuleren" title="Wedstrijd annuleren">✕</button>
           </div>
           <div class="court">
-            <div class="team">${teamA.map(n => `<span class="player">${n}</span>`).join("")}</div>
+            <div class="team">${renderPlayer(teamA[0],0)}${renderPlayer(teamA[1],1)}</div>
             <span class="vs">VS</span>
-            <div class="team">${teamB.map(n => `<span class="player">${n}</span>`).join("")}</div>
+            <div class="team">${renderPlayer(teamB[0],2)}${renderPlayer(teamB[1],3)}</div>
           </div>
         </div>`;
       });
@@ -1470,6 +1549,93 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
+  // Alle relevante wedstrijden (schema + geschiedenis) als platte lijst, met datum
+  function getAllKnownMatches() {
+    const all = [];
+    [schemaData, geschiedenisData].forEach(source => {
+      Object.keys(source).forEach(key => {
+        (source[key] || []).forEach(m => all.push(Object.assign({ date: key }, m)));
+      });
+    });
+    return all;
+  }
+
+  function daysBetween(keyA, keyB) {
+    const [ya,ma,da] = keyA.split("-").map(Number);
+    const [yb,mb,db] = keyB.split("-").map(Number);
+    const diff = (new Date(ya,ma-1,da) - new Date(yb,mb-1,db)) / 86400000;
+    return Math.abs(diff);
+  }
+
+  // Kiest de teamindeling (2v2) uit de 4 spelers die recent het minst samen speelden
+  function bestPairing(fourPlayers, referenceDateKey) {
+    const [a,b,c,d] = fourPlayers;
+    const options = [
+      [[a,b],[c,d]],
+      [[a,c],[b,d]],
+      [[a,d],[b,c]]
+    ];
+    const allMatches = getAllKnownMatches();
+
+    function teammateScore(p1, p2) {
+      let score = 0;
+      allMatches.forEach(m => {
+        const players = m.players || [];
+        const sameTeam = (players[0]===p1 && players[1]===p2) || (players[0]===p2 && players[1]===p1) ||
+                          (players[2]===p1 && players[3]===p2) || (players[2]===p2 && players[3]===p1);
+        if (sameTeam) {
+          const dagenGeleden = daysBetween(referenceDateKey, m.date) + 1;
+          score += 1 / dagenGeleden;
+        }
+      });
+      return score;
+    }
+
+    let scored = options.map(opt => ({
+      opt,
+      score: teammateScore(opt[0][0], opt[0][1]) + teammateScore(opt[1][0], opt[1][1])
+    }));
+
+    const minScore = Math.min(...scored.map(s => s.score));
+    const bestOptions = scored.filter(s => s.score === minScore);
+    const chosen = bestOptions[Math.floor(Math.random() * bestOptions.length)];
+    return [chosen.opt[0], chosen.opt[1]];
+  }
+
+  // Bepaalt wie van de 4 spelers het terrein moet boeken, op basis van de beurtrol
+  function pickBooker(fourPlayers, referenceDateKey, weekAlreadyBookedBy) {
+    const allMatches = getAllKnownMatches();
+    const historyLimitKey = dateKeyMonthsAgo(3);
+
+    const candidates = fourPlayers.filter(p => !weekAlreadyBookedBy.includes(p));
+    const pool = candidates.length > 0 ? candidates : fourPlayers;
+
+    function lastBookedDaysAgo(player) {
+      let mostRecent = null;
+      allMatches.forEach(m => {
+        if (m.date < historyLimitKey) return;
+        if (m.booker === player) {
+          if (mostRecent === null || m.date > mostRecent) mostRecent = m.date;
+        }
+      });
+      return mostRecent === null ? Infinity : daysBetween(referenceDateKey, mostRecent);
+    }
+
+    let bestScore = -1;
+    let bestPlayers = [];
+    pool.forEach(p => {
+      const score = lastBookedDaysAgo(p);
+      if (score > bestScore) {
+        bestScore = score;
+        bestPlayers = [p];
+      } else if (score === bestScore) {
+        bestPlayers.push(p);
+      }
+    });
+
+    return bestPlayers[Math.floor(Math.random() * bestPlayers.length)];
+  }
+
   inplannenBtn.addEventListener("click", async () => {
     const weekDates = [];
     for (let i = 0; i < 7; i++) {
@@ -1481,6 +1647,12 @@
     const updates = {};
     let scheduledAny = false;
     let invalidDays = [];
+    const weekBookings = []; // spelers die deze week al boeken toegewezen kregen (nieuw + reeds bestaand)
+
+    weekDates.forEach(key => {
+      getConfirmedPlayers(key).forEach(() => {}); // no-op, players zelf niet relevant hier
+      (schemaData[key] || []).forEach(m => { if (m.booker) weekBookings.push(m.booker); });
+    });
 
     weekDates.forEach(key => {
       const confirmed = getConfirmedPlayers(key);
@@ -1493,7 +1665,13 @@
         return;
       }
 
-      const newMatches = chunkArray(newlyProposed, 4).map(chunk => ({ id: generateMatchId(), players: chunk }));
+      const newMatches = chunkArray(newlyProposed, 4).map(chunk => {
+        const [teamA, teamB] = bestPairing(chunk, key);
+        const players = [...teamA, ...teamB];
+        const booker = pickBooker(players, key, weekBookings);
+        weekBookings.push(booker);
+        return { id: generateMatchId(), players, booker };
+      });
       updates[key] = arrayUnion(...newMatches);
       scheduledAny = true;
     });
@@ -1684,6 +1862,91 @@
       else if (e.key === "Backspace") { pressTimeBackspace(); e.preventDefault(); }
       else if (e.key === "Enter") { pressTimeEnter(); e.preventDefault(); }
       else if (e.key === "Escape") { closeTimePopup(); }
+    }
+  });
+
+  /* ===== DRAG & DROP: spelers wisselen van team ===== */
+  let draggedPlayer = null; // { date, id, idx, name }
+  let draggedBooker = null; // { date, id }
+
+  matchesContainer.addEventListener("dragstart", (e) => {
+    const pill = e.target.closest(".player");
+    if (pill) {
+      draggedPlayer = {
+        date: pill.dataset.date,
+        id: pill.dataset.id,
+        idx: parseInt(pill.dataset.idx, 10),
+        name: pill.dataset.name
+      };
+      pill.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      return;
+    }
+    const badge = e.target.closest(".booker-badge");
+    if (badge) {
+      draggedBooker = { date: badge.dataset.date, id: badge.dataset.id };
+      e.dataTransfer.effectAllowed = "move";
+    }
+  });
+
+  matchesContainer.addEventListener("dragend", (e) => {
+    const pill = e.target.closest(".player");
+    if (pill) pill.classList.remove("dragging");
+    matchesContainer.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+  });
+
+  matchesContainer.addEventListener("dragover", (e) => {
+    if (e.target.closest(".player") || e.target.closest(".booker-badge")) {
+      e.preventDefault();
+    }
+  });
+
+  matchesContainer.addEventListener("dragenter", (e) => {
+    const target = e.target.closest(".player") || e.target.closest(".booker-badge");
+    if (target) target.classList.add("drag-over");
+  });
+
+  matchesContainer.addEventListener("dragleave", (e) => {
+    const target = e.target.closest(".player") || e.target.closest(".booker-badge");
+    if (target) target.classList.remove("drag-over");
+  });
+
+  matchesContainer.addEventListener("drop", async (e) => {
+    e.preventDefault();
+
+    const dropPill = e.target.closest(".player");
+    if (dropPill && draggedPlayer) {
+      dropPill.classList.remove("drag-over");
+      const targetIdx = parseInt(dropPill.dataset.idx, 10);
+      const targetDate = dropPill.dataset.date;
+      const targetId = dropPill.dataset.id;
+
+      if (targetDate === draggedPlayer.date && targetId === draggedPlayer.id && targetIdx !== draggedPlayer.idx) {
+        const matches = schemaData[targetDate] || [];
+        const match = matches.find(m => m.id === targetId);
+        if (match) {
+          const newPlayers = match.players.slice();
+          const tmp = newPlayers[draggedPlayer.idx];
+          newPlayers[draggedPlayer.idx] = newPlayers[targetIdx];
+          newPlayers[targetIdx] = tmp;
+          await updateMatchField(targetDate, targetId, "players", newPlayers);
+        }
+      }
+      draggedPlayer = null;
+      return;
+    }
+
+    const dropBadgeTarget = e.target.closest(".player") || e.target.closest(".booker-badge");
+    if (dropBadgeTarget && draggedBooker) {
+      dropBadgeTarget.classList.remove("drag-over");
+      const targetDate = dropBadgeTarget.dataset.date;
+      const targetId = dropBadgeTarget.dataset.id;
+      const targetName = dropBadgeTarget.dataset.name || null;
+
+      if (targetDate === draggedBooker.date && targetId === draggedBooker.id && targetName) {
+        await updateMatchField(targetDate, targetId, "booker", targetName);
+      }
+      draggedBooker = null;
     }
   });
 </script>
