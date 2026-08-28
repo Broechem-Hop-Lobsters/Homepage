@@ -720,8 +720,8 @@
 
 <section class="schedule">
   <div class="schedule-card">
-    <h2>Schema deze week</h2>
-    <p class="sub">Voorbeeldindeling — pas de namen en dagen aan naar jullie eigen poll-resultaat.</p>
+    <h2>Speelschema</h2>
+    <p class="sub"></p>
     <div class="matches" id="matchesContainer"></div>
   </div>
 </section>
@@ -811,8 +811,6 @@
   let schemaData = {};
 
   let currentPlayer = null;
-  let viewDate = new Date();
-  viewDate.setDate(1);
 
   const playerPicker = document.getElementById("playerPicker");
   const loginPicker = document.getElementById("loginPicker");
@@ -826,11 +824,11 @@
   const weekNote = document.getElementById("weekNote");
   const inplannenBtn = document.getElementById("inplannenBtn");
   const matchesContainer = document.getElementById("matchesContainer");
+  const prevMonthBtn = document.getElementById("prevMonth");
+  const prevWeekBtn = document.getElementById("prevWeek");
 
   const DAY_LABELS = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
   const DAY_SHORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
-
-  let weekViewDate = getMonday(new Date());
 
   function getMonday(d) {
     const date = new Date(d);
@@ -839,6 +837,51 @@
     date.setDate(date.getDate() + diff);
     date.setHours(0,0,0,0);
     return date;
+  }
+
+  function startOfToday() {
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  const currentMonthDate = (() => { const d = startOfToday(); d.setDate(1); return d; })();
+  const currentWeekMonday = getMonday(startOfToday());
+
+  function isBeforeCurrentMonth(d) {
+    return d.getFullYear() < currentMonthDate.getFullYear() ||
+      (d.getFullYear() === currentMonthDate.getFullYear() && d.getMonth() < currentMonthDate.getMonth());
+  }
+
+  function isBeforeCurrentWeek(d) {
+    return d.getTime() < currentWeekMonday.getTime();
+  }
+
+  // Laatst bekeken maand/week onthouden per toestel
+  let viewDate;
+  try {
+    const savedMonth = localStorage.getItem("hoplobsters-laatste-maand");
+    viewDate = savedMonth ? new Date(savedMonth) : new Date();
+  } catch (e) {
+    viewDate = new Date();
+  }
+  viewDate.setDate(1);
+  if (isBeforeCurrentMonth(viewDate)) viewDate = new Date(currentMonthDate);
+
+  let weekViewDate;
+  try {
+    const savedWeek = localStorage.getItem("hoplobsters-laatste-week");
+    weekViewDate = savedWeek ? getMonday(new Date(savedWeek)) : getMonday(new Date());
+  } catch (e) {
+    weekViewDate = getMonday(new Date());
+  }
+  if (isBeforeCurrentWeek(weekViewDate)) weekViewDate = new Date(currentWeekMonday);
+
+  function saveViewState() {
+    try {
+      localStorage.setItem("hoplobsters-laatste-maand", viewDate.toISOString());
+      localStorage.setItem("hoplobsters-laatste-week", weekViewDate.toISOString());
+    } catch (e) {}
   }
 
   function renderLoginPicker() {
@@ -885,25 +928,88 @@
 
     renderLoginPicker();
 
+    const loadedFlags = { availability: false, voorstel: false, schema: false };
+    let cleanupDone = false;
+
+    function maybeRunCleanup() {
+      if (cleanupDone || !(loadedFlags.availability && loadedFlags.voorstel && loadedFlags.schema)) return;
+      cleanupDone = true;
+      cleanupPastData();
+    }
+
     // Live meeluisteren: zodra iemand anders iets aanklikt, werkt dit automatisch bij
     onSnapshot(availabilityDocRef, (snap) => {
       data = snap.exists() ? snap.data() : {};
+      loadedFlags.availability = true;
       renderCalendar();
       renderWeekTable();
+      maybeRunCleanup();
     });
 
     onSnapshot(voorstelDocRef, (snap) => {
       voorstelData = snap.exists() ? snap.data() : {};
+      loadedFlags.voorstel = true;
       renderWeekTable();
+      maybeRunCleanup();
     });
 
     onSnapshot(schemaDocRef, (snap) => {
       schemaData = snap.exists() ? snap.data() : {};
+      loadedFlags.schema = true;
       renderMatches();
       renderWeekTable();
+      maybeRunCleanup();
     });
 
     renderPlayerPicker();
+    renderCalendar();
+    renderWeekTable();
+    renderMatches();
+  }
+
+  async function cleanupPastData() {
+    const todayKey = dateKey(startOfToday());
+
+    const availUpdates = {};
+    let hasAvailUpdates = false;
+    Object.keys(data).forEach(player => {
+      const dates = data[player] || {};
+      Object.keys(dates).forEach(key => {
+        if (key < todayKey) {
+          if (!availUpdates[player]) availUpdates[player] = {};
+          availUpdates[player][key] = deleteField();
+          hasAvailUpdates = true;
+          delete data[player][key];
+        }
+      });
+    });
+
+    const voorstelUpdates = {};
+    let hasVoorstelUpdates = false;
+    Object.keys(voorstelData).forEach(key => {
+      if (key < todayKey) {
+        voorstelUpdates[key] = deleteField();
+        hasVoorstelUpdates = true;
+        delete voorstelData[key];
+      }
+    });
+
+    const schemaUpdates = {};
+    let hasSchemaUpdates = false;
+    Object.keys(schemaData).forEach(key => {
+      if (key < todayKey) {
+        schemaUpdates[key] = deleteField();
+        hasSchemaUpdates = true;
+        delete schemaData[key];
+      }
+    });
+
+    try {
+      if (hasAvailUpdates) await setDoc(availabilityDocRef, availUpdates, { merge: true });
+      if (hasVoorstelUpdates) await setDoc(voorstelDocRef, voorstelUpdates, { merge: true });
+      if (hasSchemaUpdates) await setDoc(schemaDocRef, schemaUpdates, { merge: true });
+    } catch (e) {}
+
     renderCalendar();
     renderWeekTable();
     renderMatches();
@@ -970,6 +1076,10 @@
     calMonthLabel.textContent = MONTH_NAMES[viewDate.getMonth()] + " " + viewDate.getFullYear();
     calGrid.innerHTML = "";
 
+    prevMonthBtn.style.visibility =
+      (viewDate.getFullYear() === currentMonthDate.getFullYear() && viewDate.getMonth() === currentMonthDate.getMonth())
+        ? "hidden" : "visible";
+
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -1024,6 +1134,8 @@
 
     const fmt = (d) => d.getDate() + " " + MONTH_NAMES[d.getMonth()].slice(0,3);
     weekLabel.textContent = fmt(monday) + " – " + fmt(sunday);
+
+    prevWeekBtn.style.visibility = (monday.getTime() === currentWeekMonday.getTime()) ? "hidden" : "visible";
 
     const weekDates = [];
     for (let i = 0; i < 7; i++) {
@@ -1083,13 +1195,16 @@
   }
 
   document.getElementById("prevMonth").addEventListener("click", () => {
+    if (viewDate.getFullYear() === currentMonthDate.getFullYear() && viewDate.getMonth() === currentMonthDate.getMonth()) return;
     viewDate.setMonth(viewDate.getMonth() - 1);
     renderCalendar();
+    saveViewState();
   });
 
   document.getElementById("nextMonth").addEventListener("click", () => {
     viewDate.setMonth(viewDate.getMonth() + 1);
     renderCalendar();
+    saveViewState();
   });
 
   function syncCalendarToWeek() {
@@ -1102,24 +1217,28 @@
   }
 
   document.getElementById("prevWeek").addEventListener("click", () => {
+    if (weekViewDate.getTime() === currentWeekMonday.getTime()) return;
     weekViewDate.setDate(weekViewDate.getDate() - 7);
     renderWeekTable();
     syncCalendarToWeek();
+    saveViewState();
   });
 
   document.getElementById("nextWeek").addEventListener("click", () => {
     weekViewDate.setDate(weekViewDate.getDate() + 7);
     renderWeekTable();
     syncCalendarToWeek();
+    saveViewState();
   });
 
   function renderMatches() {
+    const todayKey = dateKey(startOfToday());
     const dateKeys = Object.keys(schemaData)
-      .filter(k => schemaData[k] && schemaData[k].length > 0)
+      .filter(k => schemaData[k] && schemaData[k].length > 0 && k >= todayKey)
       .sort();
 
     if (dateKeys.length === 0) {
-      matchesContainer.innerHTML = "<p class=\"sub\">Nog geen wedstrijden ingepland — stel hieronder een schema samen en klik op \"Inplannen\".</p>";
+      matchesContainer.innerHTML = "<p class=\"sub\">Speelschema nog inplannen</p>";
       return;
     }
 
@@ -1210,11 +1329,9 @@
         await setDoc(schemaDocRef, updates, { merge: true });
       }
       if (invalidDays.length > 0) {
-        weekNote.textContent = scheduledAny
-          ? `Ingepland! Let op: ${invalidDays.join(", ")} nog geen veelvoud van 4 spelers.`
-          : `Nog geen veelvoud van 4 spelers op: ${invalidDays.join(", ")}.`;
+        weekNote.textContent = `Let op: ${invalidDays.join(", ")} nog geen veelvoud van 4 spelers.`;
       } else {
-        weekNote.textContent = "Ingepland! Zie \"Schema deze week\" bovenaan.";
+        weekNote.textContent = "";
       }
     } catch (e) {
       weekNote.textContent = "Kon niet inplannen — controleer je internetverbinding.";
