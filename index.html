@@ -746,10 +746,14 @@
   }
 
   @media (max-width: 640px) {
-    .match-top { gap: 0.5rem; }
-    .time-input, .court-input { font-size: 0.72rem; padding: 0.35rem 0.5rem; }
-    .court { flex-direction: column; gap: 0.7rem; align-items: flex-start; }
-    .court::after { display: none; }
+    .schedule-card { padding: 1.4rem; }
+    .match { padding: 0.8rem; }
+    .match-top { gap: 0.4rem; }
+    .time-input, .court-input { font-size: 0.68rem; padding: 0.3rem 0.4rem; }
+    .court { padding: 0.55rem 0.6rem; }
+    .team { gap: 0.3rem; }
+    .player { font-size: 0.66rem; padding: 0.26rem 0.5rem; }
+    .vs { font-size: 0.62rem; padding: 0 0.25rem; }
     .info { grid-template-columns: 1fr; }
     .availability-inner { padding: 0 1rem; }
     .cal-day { font-size: 0.7rem; }
@@ -1613,6 +1617,7 @@
   let courtEditTarget = null;
 
   function renderCourtOptions() {
+    courtOptionsList.style.display = "block";
     courtOtherInput.style.display = "none";
     courtOtherInput.value = "";
     let html = "";
