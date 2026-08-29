@@ -245,7 +245,6 @@
   .booker-badge {
     position: absolute;
     bottom: -10px;
-    right: -6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -258,6 +257,14 @@
     cursor: grab;
     z-index: 20;
     overflow: hidden;
+  }
+
+  .booker-badge.badge-left {
+    left: -6px;
+  }
+
+  .booker-badge.badge-right {
+    right: -6px;
   }
 
   .booker-badge img {
@@ -831,9 +838,9 @@
     .player { font-size: 0.66rem; padding: 0.26rem 0.5rem; }
     .vs { font-size: 0.62rem; padding: 0 0.25rem; }
     .booker-badge {
-      width: 27px;
-      height: 27px;
-      bottom: -22px;
+      width: 30px;
+      height: 30px;
+      bottom: -25px;
     }
     .booker-badge.badge-left {
       left: -4px;
